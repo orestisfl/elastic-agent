@@ -280,17 +280,16 @@ func (c *controller) generateVars(fetchContextProviders mapstr.M) []*transpiler.
 		mapping[name] = state.Current()
 	}
 	// this is ensured not to error, by how the mappings states are verified
-	mappingAst, _ := transpiler.NewAST(mapping)
-	vars[0] = transpiler.NewVarsFromAst("", mappingAst, fetchContextProviders)
+	vars[0], _ = transpiler.NewVars("", mapping, fetchContextProviders)
 
 	// add to the vars list for each dynamic providers mappings
 	for name, state := range c.dynamicProviders {
 		for _, mappings := range state.Mappings() {
-			local := mappingAst.ShallowClone()
-			dynamicAst, _ := transpiler.NewAST(mappings.mapping)
-			_ = local.Insert(dynamicAst, name)
+			local, _ := cloneMap(mapping) // will not fail; already been successfully cloned once
+			local[name] = mappings.mapping
 			id := fmt.Sprintf("%s-%s", name, mappings.id)
-			v := transpiler.NewVarsWithProcessorsFromAst(id, local, name, mappings.processors, fetchContextProviders)
+			// this is ensured not to error, by how the mappings states are verified
+			v, _ := transpiler.NewVarsWithProcessors(id, local, name, mappings.processors, fetchContextProviders)
 			vars = append(vars, v)
 		}
 	}
