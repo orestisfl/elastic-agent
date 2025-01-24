@@ -7,8 +7,6 @@ package transpiler
 import (
 	"errors"
 	"fmt"
-
-	"github.com/cespare/xxhash/v2"
 )
 
 const (
@@ -25,8 +23,7 @@ func RenderInputs(inputs Node, varsArray []*Vars) (Node, error) {
 		return nil, fmt.Errorf("inputs must be an array")
 	}
 	var nodes []varIDMap
-	nodesMap := map[uint64]*Dict{}
-	hasher := xxhash.New()
+	nodesMap := map[string]*Dict{}
 	for _, vars := range varsArray {
 		for _, node := range l.Value().([]Node) {
 			dict, ok := node.(*Dict)
@@ -59,9 +56,7 @@ func RenderInputs(inputs Node, varsArray []*Vars) (Node, error) {
 					continue
 				}
 			}
-			hasher.Reset()
-			_ = dict.Hash64With(hasher)
-			hash := hasher.Sum64()
+			hash := string(dict.Hash())
 			_, exists := nodesMap[hash]
 			if !exists {
 				nodesMap[hash] = dict
