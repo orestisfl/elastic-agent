@@ -58,7 +58,7 @@ type Node interface {
 	// Hash compute a sha256 hash of the current node and recursively call any children.
 	Hash() []byte
 
-	// Apply apply the current vars, returning the new value for the node. This does not modify the original Node.
+	// Apply apply the current vars, returning the new value for the node.
 	Apply(*Vars) (Node, error)
 
 	// Processors returns any attached processors, because of variable substitution.
@@ -147,8 +147,7 @@ func (d *Dict) ShallowClone() Node {
 		if i == nil {
 			continue
 		}
-		// Dict nodes are key-value pairs, and we do want to make a copy of the key here
-		nodes = append(nodes, i.ShallowClone())
+		nodes = append(nodes, i)
 
 	}
 	return &Dict{value: nodes}
@@ -163,7 +162,7 @@ func (d *Dict) Hash() []byte {
 	return h.Sum(nil)
 }
 
-// Apply applies the vars to all the nodes in the dictionary. This does not modify the original dictionary.
+// Apply applies the vars to all the nodes in the dictionary.
 func (d *Dict) Apply(vars *Vars) (Node, error) {
 	nodes := make([]Node, 0, len(d.value))
 	for _, v := range d.value {
@@ -278,7 +277,7 @@ func (k *Key) Hash() []byte {
 	return h.Sum(nil)
 }
 
-// Apply applies the vars to the value. This does not modify the original node.
+// Apply applies the vars to the value.
 func (k *Key) Apply(vars *Vars) (Node, error) {
 	if k.value == nil {
 		return k, nil
@@ -398,7 +397,7 @@ func (l *List) ShallowClone() Node {
 	return &List{value: nodes}
 }
 
-// Apply applies the vars to all nodes in the list. This does not modify the original list.
+// Apply applies the vars to all nodes in the list.
 func (l *List) Apply(vars *Vars) (Node, error) {
 	nodes := make([]Node, 0, len(l.value))
 	for _, v := range l.value {
@@ -473,7 +472,7 @@ func (s *StrVal) Hash() []byte {
 	return []byte(s.value)
 }
 
-// Apply applies the vars to the string value. This does not modify the original string.
+// Apply applies the vars to the string value.
 func (s *StrVal) Apply(vars *Vars) (Node, error) {
 	return vars.Replace(s.value)
 }

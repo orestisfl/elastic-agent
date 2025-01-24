@@ -1283,7 +1283,7 @@ func (c *Coordinator) generateComponentModel() (err error) {
 		c.setComponentGenError(err)
 	}()
 
-	ast := c.ast.ShallowClone()
+	ast := c.ast.Clone()
 	inputs, ok := transpiler.Lookup(ast, "inputs")
 	if ok {
 		renderedInputs, err := transpiler.RenderInputs(inputs, c.vars)
