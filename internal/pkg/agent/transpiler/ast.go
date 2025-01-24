@@ -211,14 +211,13 @@ func (d *Dict) sort() {
 
 // Key represents a Key / value pair in the dictionary.
 type Key struct {
-	name      string
-	value     Node
-	condition *eql.Expression
+	name  string
+	value Node
 }
 
 // NewKey creates a new key with provided name node pair.
 func NewKey(name string, val Node) *Key {
-	return &Key{name: name, value: val}
+	return &Key{name, val}
 }
 
 func (k *Key) String() string {
@@ -289,18 +288,11 @@ func (k *Key) Apply(vars *Vars) (Node, error) {
 		case *BoolVal:
 			return k, nil
 		case *StrVal:
-			var err error
-			if k.condition == nil {
-				k.condition, err = eql.New(v.value)
-				if err != nil {
-					return nil, fmt.Errorf(`invalid condition "%s": %w`, v.value, err)
-				}
-			}
-			cond, err := k.condition.Eval(vars, true)
+			cond, err := eql.Eval(v.value, vars, true)
 			if err != nil {
 				return nil, fmt.Errorf(`condition "%s" evaluation failed: %w`, v.value, err)
 			}
-			return &Key{name: k.name, value: NewBoolVal(cond)}, nil
+			return &Key{k.name, NewBoolVal(cond)}, nil
 		}
 		return nil, fmt.Errorf("condition key's value must be a string; received %T", k.value)
 	}
@@ -311,7 +303,7 @@ func (k *Key) Apply(vars *Vars) (Node, error) {
 	if v == nil {
 		return nil, nil
 	}
-	return &Key{name: k.name, value: v}, nil
+	return &Key{k.name, v}, nil
 }
 
 // Processors returns any attached processors, because of variable substitution.
