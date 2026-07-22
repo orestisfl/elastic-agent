@@ -129,7 +129,7 @@ func ESToOTelConfig(output *config.C, _ string, logger *logp.Logger) (map[string
 				// pipeline degenerates to one bulk at a time. With min_size 0 a
 				// consumer flushes whatever is queued; batching still happens
 				// naturally while previous requests are in flight.
-				"min_size": 0,
+				"min_size": escfg.BulkMaxSize / 2,
 				"sizer":    "items",
 			},
 			"enabled":           true,
