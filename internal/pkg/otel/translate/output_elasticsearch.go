@@ -122,15 +122,30 @@ func ESToOTelConfig(output *config.C, _ string, logger *logp.Logger) (map[string
 		"sending_queue": map[string]any{
 			"batch": map[string]any{
 				"flush_timeout": getFlushTimeout(logger, output),
-				"max_size":      escfg.BulkMaxSize,                                         // bulk_max_size
-				"min_size":      min(getFlushMinEvents(logger, output), escfg.BulkMaxSize), // queue.mem.flush.min_events, capped at max_size
-				"sizer":         "items",
+				"max_size":      escfg.BulkMaxSize, // bulk_max_size
+				// min_size must stay below max_size: with min_size == max_size and
+				// wait_for_result, a producer blocks on its residual sub-batch,
+				// which can only flush once the NEXT producer adds items, so the
+				// pipeline degenerates to one bulk at a time. Half of max keeps
+				// bulks large (a fast Elasticsearch otherwise drowns in small
+				// bulks, each paying gzip and HTTP setup) while under load the
+				// batcher refills past the floor during the in-flight request.
+				"min_size": escfg.BulkMaxSize / 2,
+				"sizer":    "items",
 			},
 			"enabled":           true,
 			"queue_size":        getQueueSize(logger, output),
 			"block_on_overflow": true,
 			"wait_for_result":   true,
-			"num_consumers":     getTotalNumWorkers(output), // num_workers * len(hosts) if loadbalance is true
+			// With batching enabled num_consumers sizes the batcher workerpool,
+			// i.e. the maximum number of concurrent bulk flushes (the queue
+			// consumer count is forced to 1 internally). One extra slot lets
+			// the next bulk encode, compress and send while the previous one
+			// waits on Elasticsearch; with exactly `worker` slots the worker:1
+			// presets never overlap the round trip. Note max_conns_per_host is
+			// not a backstop here: the beatsauth extension replaces the HTTP
+			// transport, so the workerpool is the only in-flight bound.
+			"num_consumers": getTotalNumWorkers(output) + 1,
 		},
 
 		"logs_dynamic_pipeline": map[string]any{
