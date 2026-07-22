@@ -122,15 +122,25 @@ func ESToOTelConfig(output *config.C, _ string, logger *logp.Logger) (map[string
 		"sending_queue": map[string]any{
 			"batch": map[string]any{
 				"flush_timeout": getFlushTimeout(logger, output),
-				"max_size":      escfg.BulkMaxSize,                                         // bulk_max_size
-				"min_size":      min(getFlushMinEvents(logger, output), escfg.BulkMaxSize), // queue.mem.flush.min_events, capped at max_size
-				"sizer":         "items",
+				"max_size":      escfg.BulkMaxSize, // bulk_max_size
+				// min_size must stay below max_size: with min_size == max_size and
+				// wait_for_result, a producer blocks on its residual sub-batch,
+				// which can only flush once the NEXT producer adds items, so the
+				// pipeline degenerates to one bulk at a time. With min_size 0 a
+				// consumer flushes whatever is queued; batching still happens
+				// naturally while previous requests are in flight.
+				"min_size": 0,
+				"sizer":    "items",
 			},
 			"enabled":           true,
 			"queue_size":        getQueueSize(logger, output),
 			"block_on_overflow": true,
 			"wait_for_result":   true,
-			"num_consumers":     getTotalNumWorkers(output), // num_workers * len(hosts) if loadbalance is true
+			// One more consumer than in-flight requests (capped by max_conns_per_host
+			// above) so the next batch encodes and compresses while the previous
+			// request waits on Elasticsearch; otherwise worker:1 outputs stall for
+			// the full encode+gzip time on every batch.
+			"num_consumers": getTotalNumWorkers(output) + 1,
 		},
 
 		"logs_dynamic_pipeline": map[string]any{
