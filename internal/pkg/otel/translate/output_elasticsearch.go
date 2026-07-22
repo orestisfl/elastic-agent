@@ -122,9 +122,12 @@ func ESToOTelConfig(output *config.C, _ string, logger *logp.Logger) (map[string
 		"sending_queue": map[string]any{
 			"batch": map[string]any{
 				"flush_timeout": getFlushTimeout(logger, output),
-				"max_size":      escfg.BulkMaxSize,                                         // bulk_max_size
-				"min_size":      min(getFlushMinEvents(logger, output), escfg.BulkMaxSize), // queue.mem.flush.min_events, capped at max_size
-				"sizer":         "items",
+				"max_size":      escfg.BulkMaxSize, // bulk_max_size
+				// Experiment: min_size 0 only (no num_consumers change), to isolate
+				// whether breaking the residual lock-step alone recovers worker:1
+				// preset throughput.
+				"min_size": 0,
+				"sizer":    "items",
 			},
 			"enabled":           true,
 			"queue_size":        getQueueSize(logger, output),
