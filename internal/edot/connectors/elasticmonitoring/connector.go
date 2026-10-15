@@ -110,7 +110,9 @@ func (c *monitoringConnector) appendMonitoringEvent(scopeLogs plog.ScopeLogs, rm
 	}
 
 	if compID, ok := scopeAttrs.Get(internaltelemetry.ComponentIDAttr); ok {
-		template[monitoringFieldComponentID] = compID.Str()
+		// The event templates nest component.id; a flat key would add a second value
+		// instead of replacing it, making component.id multi-valued in Elasticsearch.
+		_, _ = template.Put(monitoringFieldComponentID, compID.Str())
 	}
 
 	eventType := eventTypeVal.Str()
